@@ -1,3 +1,54 @@
-from django.shortcuts import render
+from rest_framework import generics
+from rest_framework.permissions import IsAdminUser
+from rest_framework.parsers import MultiPartParser, FormParser
 
-# Create your views here.
+from core.paginations import CustomPageNumberPagination
+from .models import *
+from .serializers import *
+
+
+class SlideCreateView(generics.CreateAPIView):
+    queryset = Slide.objects.all()
+    serializer_class = SlideSerializer
+    permission_classes = [IsAdminUser]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def perform_create(self, serializer):
+        # Automatically set the author field to the current authenticated user
+        news_instance = serializer.save(author=self.request.user)
+        return news_instance
+
+    def create(self, request, *args, **kwargs):
+        # Call the default create method to save the new instance
+        response = super().create(request, *args, **kwargs)
+
+        # The response now includes the 'uid' because it's part of the serializer's fields
+        return response
+
+class SlideRetrieveView(generics.RetrieveAPIView):
+    queryset = Slide.objects.all()
+    serializer_class = SlideSerializer
+    lookup_field = 'uid'
+    # permission_classes = [IsAdminUser]
+
+
+class SlideUpdateView(generics.UpdateAPIView):
+    queryset = Slide.objects.all()
+    serializer_class = SlideSerializer
+    permission_classes = [IsAdminUser]
+    lookup_field = 'uid'
+    parser_classes = [MultiPartParser, FormParser]
+
+
+class SlideDeleteView(generics.DestroyAPIView):
+    queryset = Slide.objects.all()
+    serializer_class = SlideSerializer
+    lookup_field = 'uid'
+    permission_classes = [IsAdminUser]
+
+
+class SlideListView(generics.ListAPIView):
+    queryset = Slide.objects.all().order_by('-uploaded_at')
+    serializer_class = SlideSerializer
+    pagination_class = CustomPageNumberPagination
+    # permission_classes = [IsAdminUser]
