@@ -11,7 +11,7 @@ from django.contrib.auth import authenticate
 class SendVerificationCodeSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=250)
     last_name = serializers.CharField(max_length=250)
-    # phone_number = serializers.CharField(max_length=20)
+    phone_number = serializers.CharField(max_length=20)
     email = serializers.EmailField()
     password = serializers.CharField(min_length=4, write_only=True)
 

@@ -19,10 +19,6 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
 
-
-
-
-
 class SendVerificationCodeAPIView(APIView):
     @swagger_auto_schema(request_body=SendVerificationCodeSerializer)
     def post(self, request):
@@ -31,6 +27,10 @@ class SendVerificationCodeAPIView(APIView):
         data = serializer.validated_data
 
         email = data['email']
+
+        # Limit user registration to 3 users
+        if User.objects.count() >= 3:
+            return Response({"error": "Only 3 users can be registered."}, status=status.HTTP_403_FORBIDDEN)
 
         # Check if the email is already registered
         if User.objects.filter(email=email).exists():
@@ -44,7 +44,6 @@ class SendVerificationCodeAPIView(APIView):
         cache.set(cache_key, json.dumps({
             "name": data['name'],
             "last_name": data['last_name'],
-            # "phone_number": data['phone_number'],
             "password": data['password'],
             "code": code
         }), timeout=300)
@@ -55,8 +54,6 @@ class SendVerificationCodeAPIView(APIView):
         email_msg.send(fail_silently=False)
 
         return Response({"message": "Tasdiqlash kodi sizning email pochtangizga jo\'natildi ."}, status=status.HTTP_200_OK)
-
-
 
 
 class VerifyCodeAPIView(APIView):
@@ -78,17 +75,18 @@ class VerifyCodeAPIView(APIView):
         if data['code'] != code:
             return Response({"error": "Invalid verification code."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Limit user registration to 3 users
+        if User.objects.count() >= 3:
+            return Response({"error": "Only 3 users can be registered."}, status=status.HTTP_403_FORBIDDEN)
 
-        if User.objects.filter(email=email).exists():
-            return Response({"error": "User with this email already exists."}, status=status.HTTP_400_BAD_REQUEST)
-
-
+        # Create user and make them admin
         user = User.objects.create(
             name=data['name'],
             last_name=data['last_name'],
-            # phone_number=data['phone_number'],
             email=email,
-            is_verified=True
+            is_verified=True,
+            is_admin=True
+
         )
         user.set_password(data['password'])
         user.save()
@@ -100,8 +98,10 @@ class VerifyCodeAPIView(APIView):
             "uid": user.uid,
             "refresh": str(refresh),
             "access": str(refresh.access_token),
-            "message": "User account created and logged in successfully."
+            "message": "Admin account created and logged in successfully."
         }, status=status.HTTP_201_CREATED)
+
+
 
 
 class RetrieveProfileView(generics.RetrieveAPIView):
